@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/hereswilson/go-chat/internal/handlers"
 )
 
@@ -10,24 +11,26 @@ func main() {
 
 	viewsEngine := html.New("./views", ".html")
 
-	// Start new fiber instance
 	app := fiber.New(fiber.Config{
 		Views: viewsEngine,
 	})
 
 	app.Static("/static/", "./static")
+	appHandler := handlers.NewAppHandler()
+	server := NewWebSocket()
 
-	// Create a "ping" handler to test the server
+	// app.Use(server.HandleConnections)
+
 	app.Get("/ping", func(ctx *fiber.Ctx) error {
 		return ctx.SendString("Welcome to fiber")
 	})
 
-	// create new App Handler
-	appHandler := handlers.NewAppHandler()
-
-	// Add appHandler routes
 	app.Get("/", appHandler.HandleGetIndex)
+	app.Get("/ws", websocket.New(func(ctx *websocket.Conn) {
+		server.HandleWebSocket(ctx)
+	}))
 
-	// Start the http server
+	go server.HandleMessages()
+
 	app.Listen(":3000")
 }
